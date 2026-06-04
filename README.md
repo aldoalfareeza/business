@@ -50,6 +50,62 @@ business-/
 └── README.md           # Dokumentasi ini
 ```
 
+## 💻 Code Examples
+
+### Menambah Produk Baru
+```javascript
+// Data produk baru
+const newProduct = {
+  nama: 'Kopi Premium',
+  satuan: 'Kg',
+  harga: 75000,
+  fee: 10  // Fee default 10%
+};
+
+// Tambahkan ke array
+App.data.produk.push(newProduct);
+save(); // Simpan ke localStorage
+```
+
+### Membuat Penjualan
+```javascript
+// Data penjualan
+const sale = {
+  produkIndex: 0,      // Index produk
+  jumlah: 5,
+  gross: 375000,       // Harga total sebelum fee
+  feePercent: 10,
+  feeNominal: 37500,
+  total: 337500,       // Harga yang diterima (setelah fee)
+  tanggal: '2026-06-04',
+  note: 'Penjualan via Shopee',
+  status: 'selesai'
+};
+
+App.data.penjualan.push(sale);
+save();
+```
+
+### Export Data ke CSV
+```javascript
+// Sudah built-in, tinggal klik tombol di UI
+// Atau manual:
+const csvData = convertToCSV(App.data.produk, ['nama', 'harga', 'satuan']);
+downloadText(csvData, 'produk.csv', 'text/csv');
+```
+
+### Backup/Restore Data
+```javascript
+// Backup (Export JSON)
+const backup = JSON.stringify(App.data, null, 2);
+downloadText(backup, `backup_${todayISO()}.json`, 'application/json');
+
+// Restore (Import JSON)
+const importedData = JSON.parse(jsonString);
+App.data = importedData;
+save();
+```
+
 ## 🔒 Keamanan
 
 ✅ Input sanitization untuk XSS protection
@@ -58,12 +114,36 @@ business-/
 ✅ Validasi data di setiap operasi
 ✅ Logout otomatis saat session berakhir
 
+### Contoh Input Sanitization:
+```javascript
+function escapeHtml(text) {
+  if (typeof text !== 'string') return text;
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Penggunaan
+const safeName = escapeHtml(userInput);
+```
+
 ## 💾 Penyimpanan Data
 
 - **Local Storage**: Data disimpan di browser Anda secara lokal
 - **Max Size**: ~5MB (cukup untuk ribuan transaksi)
 - **Auto-cleanup**: Monitoring storage setiap 7 hari
 - **Backup Manual**: Export JSON kapan saja
+
+```javascript
+// Cek ukuran storage
+function getStorageSize() {
+  const appData = JSON.stringify(App.data);
+  return new Blob([appData]).size;
+}
+
+const sizeKB = Math.round(getStorageSize() / 1024);
+console.log(`Storage: ${sizeKB}KB`);
+```
 
 ## 📊 Export Data
 
@@ -84,6 +164,7 @@ Edit di `styles.css`:
   --primary: #00bcd4;        /* Warna utama */
   --accent: #6f42c1;         /* Warna aksen */
   --danger: #e63946;         /* Warna warning */
+  --bg: linear-gradient(135deg,#f7fbff,#eef6ff);
 }
 ```
 
@@ -95,26 +176,53 @@ Edit di `index.html`:
 
 Dan di `manifest.json`:
 ```json
-"name": "Business Management",
-"short_name": "BM"
+{
+  "name": "Business Management",
+  "short_name": "BM",
+  "description": "Aplikasi manajemen kas untuk bisnis"
+}
+```
+
+### Tambah Menu Baru
+```javascript
+// Di index.html
+<div class="menu-item" data-page="page-custom">
+  <div class="icon">🎯</div>
+  <div class="label">Menu Baru</div>
+</div>
+
+// Di app.js
+function renderCustomPage() {
+  const out = document.getElementById('custom-list');
+  // tambahkan logic
+}
+
+// Tambah ke renderAll()
+case 'page-custom': renderCustomPage(); break;
 ```
 
 ## 🐛 Troubleshooting
 
 ### Data tidak tersimpan?
-- Periksa localStorage di DevTools (F12 > Application > Local Storage)
-- Pastikan browser tidak dalam mode Private/Incognito
-- Clear cache jika perlu
+```javascript
+// Check localStorage di console
+console.log(localStorage.getItem('bm_v3'));
+
+// Clear dan reset
+localStorage.removeItem('bm_v3');
+location.reload();
+```
 
 ### Login tidak bekerja?
 - Pastikan koneksi internet stabil
 - Cek Supabase credentials di `app.js`
 - Buat user di Supabase dashboard terlebih dahulu
+- Check console untuk error details
 
 ### Chart tidak muncul?
-- Pastikan Chart.js library terimport dengan benar
+- Pastikan Chart.js library terimport: `<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>`
 - Periksa console (F12) untuk error messages
-- Refresh halaman
+- Refresh halaman (Ctrl+Shift+R)
 
 ## 📱 PWA Installation
 
@@ -122,6 +230,17 @@ Dan di `manifest.json`:
 2. Klik menu (⋮) → "Install app" atau "Add to Home Screen"
 3. Aplikasi akan tersimpan di device Anda
 4. Bisa diakses offline tanpa internet
+
+```json
+// manifest.json memungkinkan PWA features
+{
+  "name": "Business Management",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#00bcd4"
+}
+```
 
 ## 🚀 Deployment
 
@@ -145,12 +264,53 @@ Push ke branch `gh-pages` atau setup di repository settings
 firebase deploy
 ```
 
-## 📝 Notes
+## 📝 API Reference
 
-- Semua data disimpan di local storage browser Anda
-- Silakan backup data secara berkala dengan export JSON
-- Untuk production, sebaiknya setup HTTPS
-- Untuk PWA, host harus HTTPS
+### Core Functions
+
+```javascript
+// Load data dari localStorage
+load()
+
+// Simpan data ke localStorage
+save()
+
+// Format uang ke Rupiah
+formatRupiah(1000000)  // "Rp 1.000.000"
+
+// Dapatkan tanggal hari ini (ISO format)
+todayISO()  // "2026-06-04"
+
+// Escape HTML untuk XSS protection
+escapeHtml("<script>alert('xss')</script>")
+
+// Download file
+downloadText(content, 'filename.txt', 'text/plain')
+
+// Render halaman
+showPage('page-dashboard')
+```
+
+### Chart Functions
+
+```javascript
+renderBarChart()   // Grafik penghasilan harian
+renderPieChart()   // Grafik komposisi pengeluaran
+renderLineChart()  // Grafik total aset kumulatif
+```
+
+## 📱 Browser Support
+
+✅ Chrome/Edge 90+
+✅ Firefox 88+
+✅ Safari 14+
+✅ Mobile browsers (iOS Safari, Chrome Mobile)
+
+## 📄 License
+
+Free to use for personal & commercial projects
+
+---
 
 ## 🤝 Support
 
@@ -160,9 +320,10 @@ Jika ada pertanyaan atau bug:
 3. Lakukan export/import untuk reset
 4. Report issue di GitHub
 
-## 📄 License
+## 📞 Contact
 
-Free to use for personal & commercial projects
+- **GitHub**: https://github.com/aldoalfareeza/business-
+- **Email**: aldoalfareezanasrullah@gmail.com
 
 ---
 
