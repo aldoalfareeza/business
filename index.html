@@ -1,253 +1,241 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta name="description" content="Business Management - Aplikasi manajemen kas untuk bisnis Anda">
-<meta name="theme-color" content="#00bcd4">
-<title>BUSINESS MANAGEMENT</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css">
-<link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Management - Real-Time Sync</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root{
+            --bg: linear-gradient(135deg,#f7fbff,#eef6ff);
+            --glass: rgba(255,255,255,0.86);
+            --muted:#6b7785;
+            --primary:#00bcd4;
+            --accent:#6f42c1;
+            --danger:#e63946;
+            --card-shadow: 0 10px 30px rgba(15,23,42,0.06);
+            --modal-backdrop: rgba(6,10,20,0.6);
+            --modal-bg: rgba(255,255,255,0.96);
+        }
+        *{box-sizing:border-box;font-family:'Poppins',sans-serif}
+        html,body{height:100%}
+        body{margin:0;min-height:100vh;background:var(--bg);color:#0f1724;padding-bottom:100px}
+        header.topbar{
+            position:sticky;top:0;z-index:60;
+            background:linear-gradient(90deg,rgba(0,188,212,0.10),rgba(111,66,193,0.06));
+            backdrop-filter:blur(6px);
+            display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid rgba(0,0,0,0.04);
+        }
+        .header-left{display:flex;align-items:center;gap:10px}
+        .btn-icon{background:transparent;border:none;font-size:18px;cursor:pointer;padding:8px;border-radius:8px}
+        .title-large{font-weight:700;letter-spacing:0.3px}
+        .title-small{font-size:13px;color:var(--muted);margin-top:2px}
+        .sync-badge{font-size:11px;color:#10b981;padding:2px 8px;background:rgba(16,185,129,0.1);border-radius:12px}
+        main{padding:14px}
+        .saldo-card{border-radius:12px;background:linear-gradient(135deg,#00e6e6,#9d4edd);color:#fff;padding:14px;box-shadow:var(--card-shadow);display:flex;align-items:center;gap:12px}
+        .saldo-value{font-weight:700;font-size:24px;margin-top:4px}
+        .menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+        .menu-item{background:var(--glass);padding:12px;border-radius:10px;text-align:center;cursor:pointer;box-shadow:var(--card-shadow);transition:transform .12s}
+        .menu-item:hover{transform:translateY(-6px)}
+        .menu-item .icon{font-size:18px;margin-bottom:6px;color:var(--primary)}
+        .menu-item .label{font-weight:600;font-size:13px;color:#0f1724}
+        .charts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+        .chart-card{background:var(--glass);padding:10px;border-radius:10px;box-shadow:var(--card-shadow)}
+        section{display:none;padding-top:8px}
+        section.active{display:block}
+        .page-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+        .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+        .btn.primary{background:var(--primary);color:#fff}
+        .btn.ghost{background:rgba(0,0,0,0.06)}
+        .list-card{background:var(--glass);padding:10px;border-radius:10px;margin-bottom:10px;box-shadow:var(--card-shadow)}
+        input,select{padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;width:100%}
+        .bottom-nav{position:fixed;left:12px;right:12px;bottom:12px;height:64px;background:linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.96));border-radius:14px;display:flex;align-items:center;justify-content:space-around;box-shadow:0 12px 30px rgba(2,6,23,0.08);z-index:70}
+        .nav-item{font-size:12px;color:#223;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+        .nav-item .nicon{font-size:18px}
+        .modal-backdrop{position:fixed;inset:0;background:var(--modal-backdrop);display:none;align-items:center;justify-content:center;z-index:120}
+        .modal-backdrop.active{display:flex}
+        .modal{background:var(--modal-bg);padding:14px;border-radius:12px;width:calc(100% - 36px);max-width:560px;box-shadow:var(--card-shadow)}
+        .modal .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+        .modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+        .small{font-size:12px;color:var(--muted)}
+        @media (max-width:900px){
+            .menu-grid{grid-template-columns:repeat(3,1fr)}
+            .charts{grid-template-columns:1fr}
+        }
+        @media (max-width:520px){
+            .menu-grid{grid-template-columns:repeat(2,1fr)}
+        }
+    </style>
 </head>
 <body>
-<!-- ================= LOGICAL AUTH INTEGRATION ================= -->
-<div id="login-blocker" style="position:fixed; inset:0; background:#f4f7fc; z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px; font-family:sans-serif;">
-  <div style="background:#fff; padding:32px; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.06); width:100%; max-width:380px; text-align:center; box-sizing:border-box;">
-    <h3 style="margin:0 0 8px 0; color:#0f172a; font-size:22px; font-weight:700;">EllUX Legacy</h3>
-    <p style="margin:0 0 24px 0; color:#64748b; font-size:14px;">Log in admin untuk mengelola kas Acrylic Industries</p>
-    
-    <div style="margin-bottom:14px; text-align:left;">
-      <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:6px;">Email Admin</label>
-      <input id="login-email" type="email" placeholder="nama@email.com" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box; outline:none; background:#fff; color:#0f172a;">
-    </div>
-    
-    <div style="margin-bottom:20px; text-align:left;">
-      <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:6px;">Password</label>
-      <input id="login-password" type="password" placeholder="••••••••" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box; outline:none; background:#fff; color:#0f172a;">
-    </div>
-    
-    <button id="btn-login" style="width:100%; padding:12px; border:none; border-radius:8px; background:#2563eb; color:#fff; font-size:14px; font-weight:600; cursor:pointer; transition:background 0.2s;">Masuk Aplikasi</button>
-    <div id="login-error" style="color:#ef4444; font-size:13px; margin-top:12px; display:none; text-align:center; font-weight:500;"></div>
-  </div>
-</div>
-<!-- ============================================================ -->
 
-<header class="topbar" style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border-bottom:1px solid rgba(0,0,0,0.04); position:sticky; top:0; z-index:60; backdrop-filter:blur(6px);">
-  <div class="header-left" style="display:flex; align-items:center; gap:10px;">
-    <button id="back-btn" class="btn-icon" style="display:none">‹</button>
-    <div style="text-align: left;">
-      <div id="header-title" class="title-large" style="font-weight:700; letter-spacing:0.3px;">BUSINESS MANAGEMENT</div>
-      <div id="header-sub" class="title-small" style="font-size:13px; color:var(--muted); margin-top:2px;">Control panel — EllUX Legacy</div>
+<!-- LOGIN BLOCKER -->
+<div id="login-blocker" style="position:fixed; inset:0; background:#f4f7fc; z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px; font-family:sans-serif;">
+    <div style="background:#fff; padding:32px; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.06); width:100%; max-width:380px; text-align:center; box-sizing:border-box;">
+        <h3 style="margin:0 0 8px 0; color:#0f172a; font-size:22px; font-weight:700;">Business Management</h3>
+        <p style="margin:0 0 24px 0; color:#64748b; font-size:14px;">Login untuk akses real-time sync dengan tim</p>
+        
+        <div style="margin-bottom:14px; text-align:left;">
+            <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:6px;">Email</label>
+            <input id="login-email" type="email" placeholder="nama@email.com" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;">
+        </div>
+        
+        <div style="margin-bottom:20px; text-align:left;">
+            <label style="display:block; font-size:12px; font-weight:600; color:#475569; margin-bottom:6px;">Password</label>
+            <input id="login-password" type="password" placeholder="••••••••" style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; box-sizing:border-box;">
+        </div>
+        
+        <button id="btn-login" style="width:100%; padding:12px; border:none; border-radius:8px; background:#2563eb; color:#fff; font-size:14px; font-weight:600; cursor:pointer;">Masuk</button>
+        <div id="login-error" style="color:#ef4444; font-size:13px; margin-top:12px; display:none; font-weight:500;"></div>
     </div>
-  </div>
-  
-  <div style="display:flex; align-items:center; gap:12px;">
-    <button id="history-btn" class="btn-icon" title="Riwayat" style="font-size:18px;">📜</button>
-    
-    <div style="position: relative; cursor: pointer;">
-      <input type="file" id="dash-profile-input" accept="image/*" style="display: none;">
-      <div id="dash-profile-trigger" style="width: 38px; height: 38px; border-radius: 50%; background: #cbd5e1; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-        <span id="dash-profile-avatar-txt" style="font-size: 14px; font-weight: 600; color: #fff;">O</span>
-        <img id="dash-profile-img" src="" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; display: none;">
-      </div>
+</div>
+
+<header class="topbar">
+    <div class="header-left">
+        <button id="back-btn" class="btn-icon" style="display:none">‹</button>
+        <div>
+            <div id="header-title" class="title-large">Business Management</div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <div id="header-sub" class="title-small">Real-Time Sync</div>
+                <div id="sync-badge" class="sync-badge" style="display:none">🔄 Syncing</div>
+            </div>
+        </div>
     </div>
-  </div>
+    <div style="display:flex; gap:12px;">
+        <button id="history-btn" class="btn-icon">📜</button>
+        <button id="logout-btn" class="btn-icon">🚪</button>
+    </div>
 </header>
 
-
 <main>
-  <!-- DASHBOARD -->
-  <section id="page-dashboard" class="active">
-    <div class="saldo-card" id="saldo-card">
-      <div style="flex:1">
-        <small>Saldo</small>
-        <div class="saldo-value" id="saldo-value">Rp 0</div>
-        <div id="hutang-label" class="hutang-label" style="display:none"></div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-        <button id="toggle-saldo" class="btn ghost" title="Sembunyikan/Perlihatkan saldo">👁️</button>
-        <button class="btn ghost" id="open-profile">Profil</button>
-      </div>
-    </div>
-
-    <div class="menu-grid" id="main-menu">
-      <div class="menu-item" data-page="page-produk"><div class="icon">📦</div><div class="label">Produk</div></div>
-      <div class="menu-item" data-page="page-penjualan"><div class="icon">💰</div><div class="label">Penjualan</div></div>
-      <div class="menu-item" data-page="page-pembelian"><div class="icon">🛒</div><div class="label">Pembelian</div></div>
-      <div class="menu-item" data-page="page-pengeluaran"><div class="icon">📤</div><div class="label">Pengeluaran</div></div>
-      <div class="menu-item" data-page="page-iklan"><div class="icon">📈</div><div class="label">Iklan</div></div>
-      <div class="menu-item" data-page="page-hutang"><div class="icon">📚</div><div class="label">Hutang</div></div>
-      <div class="menu-item" data-page="page-profil"><div class="icon">⚙️</div><div class="label">Profil</div></div>
-      <div class="menu-item" data-page="page-dashboard"><div class="icon">📊</div><div class="label">Ringkasan</div></div>
-    </div>
-<div class="card" style="margin-top: 16px; padding: 16px;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--muted);">Histori Transaksi Terakhir</h4>
-    <span id="mini-history-more" style="font-size: 13px; font-weight: 600; color: var(--primary); cursor: pointer;">Show More →</span>
-  </div>
-  <div id="mini-history-list" style="display: flex; flex-direction: column; gap: 10px;">
-    <div class="small" style="color: var(--muted); text-align: center; padding: 10px 0;">Belum ada transaksi.</div>
-  </div>
-</div>
-
-    <div class="charts">
-      <div class="chart-card">
-        <div class="chart-header">
-          <div><strong>Penghasilan Harian</strong><div class="small">Bar (per hari)</div></div>
-          <div class="chart-controls">
-            <select id="bar-preset"><option value="7">7 hari</option><option value="30">30 hari</option><option value="90">90 hari</option><option value="365">1 tahun</option><option value="all">Semua</option><option value="custom">Custom</option></select>
-            <input type="date" id="bar-from" style="display:none">
-            <input type="date" id="bar-to" style="display:none">
-            <button class="btn ghost" id="bar-apply">Terapkan</button>
-          </div>
+    <!-- DASHBOARD -->
+    <section id="page-dashboard" class="active">
+        <div class="saldo-card">
+            <div style="flex:1">
+                <small>Saldo Total</small>
+                <div class="saldo-value" id="saldo-value">Rp 0</div>
+            </div>
+            <button id="toggle-saldo" class="btn ghost">👁️</button>
         </div>
-        <canvas id="barChart" height="140"></canvas>
-      </div>
 
-      <div class="chart-card">
-        <div class="chart-header">
-          <div><strong>Komposisi Pengeluaran</strong><div class="small">Pie</div></div>
-          <div class="chart-controls">
-            <select id="pie-preset"><option value="30">30 hari</option><option value="90">90 hari</option><option value="365">1 tahun</option><option value="all">Semua</option><option value="custom">Custom</option></select>
-            <input type="date" id="pie-from" style="display:none">
-            <input type="date" id="pie-to" style="display:none">
-            <button class="btn ghost" id="pie-apply">Terapkan</button>
-          </div>
+        <div class="menu-grid" id="main-menu">
+            <div class="menu-item" data-page="page-produk"><div class="icon">📦</div><div class="label">Produk</div></div>
+            <div class="menu-item" data-page="page-penjualan"><div class="icon">💰</div><div class="label">Penjualan</div></div>
+            <div class="menu-item" data-page="page-pembelian"><div class="icon">🛒</div><div class="label">Pembelian</div></div>
+            <div class="menu-item" data-page="page-pengeluaran"><div class="icon">📤</div><div class="label">Pengeluaran</div></div>
+            <div class="menu-item" data-page="page-iklan"><div class="icon">📈</div><div class="label">Iklan</div></div>
+            <div class="menu-item" data-page="page-hutang"><div class="icon">📚</div><div class="label">Hutang</div></div>
+            <div class="menu-item" data-page="page-pengaturan"><div class="icon">⚙️</div><div class="label">Pengaturan</div></div>
         </div>
-        <canvas id="pieChart" height="140"></canvas>
-      </div>
 
-      <div class="chart-card">
-        <div class="chart-header">
-          <div><strong>Total Aset</strong><div class="small">Line (kumulatif)</div></div>
-          <div class="chart-controls">
-            <select id="line-preset"><option value="30">30 hari</option><option value="90">90 hari</option><option value="365">1 tahun</option><option value="all">Semua</option><option value="custom">Custom</option></select>
-            <input type="date" id="line-from" style="display:none">
-            <input type="date" id="line-to" style="display:none">
-            <button class="btn ghost" id="line-apply">Terapkan</button>
-          </div>
+        <div class="charts">
+            <div class="chart-card"><canvas id="barChart" height="140"></canvas></div>
+            <div class="chart-card"><canvas id="pieChart" height="140"></canvas></div>
+            <div class="chart-card"><canvas id="lineChart" height="140"></canvas></div>
         </div>
-        <canvas id="lineChart" height="140"></canvas>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- PRODUK -->
-  <section id="page-produk">
-    <div class="page-head">
-      <div><h2 style="margin:0">Produk</h2><div class="small">Kelola produk (nama, harga, stok, satuan, fee default %)</div></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn primary" id="add-produk">+ Produk</button>
-        <button class="btn ghost" id="export-produk-csv">Export CSV</button>
-      </div>
-    </div>
-    <div id="produk-list"></div>
-  </section>
-
-  <!-- PENJUALAN -->
-  <section id="page-penjualan">
-    <div class="page-head">
-      <div><h2 style="margin:0">Penjualan</h2><div class="small">Buat & kelola penjualan — fitur fee (gross & net to %) ada</div></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn primary" id="add-penjualan">+ Penjualan</button>
-        <button class="btn ghost" id="export-penjualan-csv">Export CSV</button>
-      </div>
-    </div>
-    <div id="penjualan-list"></div>
-  </section>
-
-  <!-- PEMBELIAN -->
-  <section id="page-pembelian">
-    <div class="page-head">
-      <div><h2 style="margin:0">Pembelian</h2><div class="small">Pembelian otomatis hitung total dari produk × jumlah (tanpa fee)</div></div>
-      <div><button class="btn primary" id="add-pembelian">+ Pembelian</button></div>
-    </div>
-    <div id="pembelian-list"></div>
-  </section>
-
-  <!-- PENGELUARAN -->
-  <section id="page-pengeluaran">
-    <div class="page-head">
-      <div><h2 style="margin:0">Pengeluaran</h2><div class="small">Catat pengeluaran operasi, gaji, dll</div></div>
-      <div><button class="btn primary" id="add-pengeluaran">+ Pengeluaran</button></div>
-    </div>
-    <div id="pengeluaran-list"></div>
-  </section>
-
-  <!-- IKLAN -->
-  <section id="page-iklan">
-    <div class="page-head">
-      <div><h2 style="margin:0">Iklan</h2><div class="small">Pisahkan biaya iklan</div></div>
-      <div><button class="btn primary" id="add-iklan">+ Iklan</button></div>
-    </div>
-    <div id="iklan-list"></div>
-  </section>
-
-  <!-- HUTANG -->
-  <section id="page-hutang">
-    <div class="page-head">
-      <div><h2 style="margin:0">Hutang</h2><div class="small">Catat hutang & tandai lunas</div></div>
-      <div><button class="btn primary" id="add-hutang">+ Hutang</button></div>
-    </div>
-    <div id="hutang-list"></div>
-  </section>
-
-  <!-- PROFIL -->
-  <section id="page-profil">
-    <div class="page-head">
-      <div><h2 style="margin:0">Profil</h2><div class="small">Ganti nama & upload foto profil — Import/Export JSON di sini</div></div>
-      <div></div>
-    </div>
-    <div class="list-card">
-      <div style="display:flex;gap:12px;align-items:center">
-        <div style="width:72px;height:72px;border-radius:12px;overflow:hidden;background:rgba(0,0,0,0.06)"><img id="profile-img" src="" style="width:100%;height:100%;object-fit:cover"></div>
-        <div style="flex:1">
-          <div><input id="profile-name" placeholder="Nama pemilik"></div>
-          <div class="small" style="margin-top:6px">Upload foto profil (.jpg/.png)</div>
-          <div style="margin-top:8px;display:flex;gap:8px">
-            <input type="file" id="profile-file" accept="image/*">
-            <button class="btn primary" id="save-profile">Simpan</button>
-            <button class="btn ghost" id="clear-profile">Hapus</button>
-          </div>
+    <!-- PRODUK -->
+    <section id="page-produk">
+        <div class="page-head">
+            <h2 style="margin:0">Produk</h2>
+            <button class="btn primary" id="add-produk">+ Produk</button>
         </div>
-      </div>
-      <hr style="margin:12px 0">
-      <div style="display:flex;gap:8px;align-items:center">
-        <label><input type="checkbox" id="hide-saldo-checkbox"> Sembunyikan saldo (Hide)</label>
-        <div style="flex:1"></div>
-        <button class="btn ghost" id="reset-data">Reset Semua Data</button>
-      </div>
-      <hr style="margin:12px 0">
-      <div style="display:flex;gap:8px;align-items:center">
-        <button class="btn ghost" id="import-json">Import JSON</button>
-        <button class="btn ghost" id="export-json">Export JSON</button>
-      </div>
-    </div>
-  </section>
+        <div id="produk-list"></div>
+    </section>
 
+    <!-- PENJUALAN -->
+    <section id="page-penjualan">
+        <div class="page-head">
+            <h2 style="margin:0">Penjualan</h2>
+            <button class="btn primary" id="add-penjualan">+ Penjualan</button>
+        </div>
+        <div id="penjualan-list"></div>
+    </section>
+
+    <!-- PEMBELIAN -->
+    <section id="page-pembelian">
+        <div class="page-head">
+            <h2 style="margin:0">Pembelian</h2>
+            <button class="btn primary" id="add-pembelian">+ Pembelian</button>
+        </div>
+        <div id="pembelian-list"></div>
+    </section>
+
+    <!-- PENGELUARAN -->
+    <section id="page-pengeluaran">
+        <div class="page-head">
+            <h2 style="margin:0">Pengeluaran</h2>
+            <button class="btn primary" id="add-pengeluaran">+ Pengeluaran</button>
+        </div>
+        <div id="pengeluaran-list"></div>
+    </section>
+
+    <!-- IKLAN -->
+    <section id="page-iklan">
+        <div class="page-head">
+            <h2 style="margin:0">Iklan</h2>
+            <button class="btn primary" id="add-iklan">+ Iklan</button>
+        </div>
+        <div id="iklan-list"></div>
+    </section>
+
+    <!-- HUTANG -->
+    <section id="page-hutang">
+        <div class="page-head">
+            <h2 style="margin:0">Hutang</h2>
+            <button class="btn primary" id="add-hutang">+ Hutang</button>
+        </div>
+        <div id="hutang-list"></div>
+    </section>
+
+    <!-- PENGATURAN -->
+    <section id="page-pengaturan">
+        <div class="page-head">
+            <h2 style="margin:0">Pengaturan</h2>
+        </div>
+        <div class="list-card">
+            <h3>Info Bisnis</h3>
+            <input id="business-name" placeholder="Nama bisnis" style="width:100%; padding:8px; margin-bottom:8px;">
+            <button class="btn primary" onclick="saveSettings()" style="width:100%">Simpan</button>
+        </div>
+        <div class="list-card" style="margin-top:12px;">
+            <label style="display:flex;gap:8px;align-items:center">
+                <input type="checkbox" id="hide-saldo"> 
+                <span>Sembunyikan saldo</span>
+            </label>
+        </div>
+        <div class="list-card" style="margin-top:12px;">
+            <button class="btn ghost" id="logout-full" style="width:100%">Logout</button>
+        </div>
+    </section>
 </main>
 
-<!-- Riwayat Modal (gabungan) -->
-<div id="history-modal" class="modal-backdrop"><div class="modal"><h3>Riwayat Aktivitas</h3><div class="small">Semua aktivitas terbaru → lama</div>
-  <div style="margin-top:8px;display:flex;gap:8px"><input id="history-search" placeholder="Cari..." style="flex:1"><button class="btn ghost" id="history-export">Export CSV</button></div>
-  <div id="history-rows" style="margin-top:10px;max-height:360px;overflow:auto"></div>
-  <div class="actions"><button class="btn ghost" onclick="closeHistory()">Tutup</button></div>
-</div></div>
+<!-- MODAL HISTORY -->
+<div id="history-modal" class="modal-backdrop">
+    <div class="modal">
+        <h3>Riwayat Transaksi</h3>
+        <div id="history-list" style="max-height:400px;overflow-y:auto;margin:10px 0"></div>
+        <div class="actions">
+            <button class="btn ghost" onclick="closeHistory()">Tutup</button>
+        </div>
+    </div>
+</div>
 
-<!-- Modal generic -->
-<div id="modal-back" class="modal-backdrop"><div class="modal" id="modal-content"></div></div>
-<div id="modal-secondary" class="modal-backdrop"><div class="modal" id="modal-secondary-content"></div></div>
+<!-- MODAL GENERIC -->
+<div id="modal-back" class="modal-backdrop">
+    <div class="modal" id="modal-content"></div>
+</div>
 
-<!-- bottom nav -->
+<!-- BOTTOM NAV -->
 <div id="bottom-nav" class="bottom-nav">
-  <div class="nav-item" data-page="page-produk"><div class="nicon">📦</div><div>Produk</div></div>
-  <div class="nav-item" data-page="page-penjualan"><div class="nicon">💰</div><div>Penjualan</div></div>
-  <div class="nav-item" data-page="page-dashboard"><div class="nicon">📊</div><div>Ringkasan</div></div>
-  <div class="nav-item" data-page="page-pembelian"><div class="nicon">🛒</div><div>Pembelian</div></div>
-  <div class="nav-item" data-page="page-pengeluaran"><div class="nicon">📤</div><div>Pengeluaran</div></div>
+    <div class="nav-item" data-page="page-produk"><div class="nicon">📦</div>Produk</div>
+    <div class="nav-item" data-page="page-penjualan"><div class="nicon">💰</div>Penjualan</div>
+    <div class="nav-item" data-page="page-dashboard"><div class="nicon">📊</div>Dashboard</div>
+    <div class="nav-item" data-page="page-pembelian"><div class="nicon">🛒</div>Pembelian</div>
+    <div class="nav-item" data-page="page-pengeluaran"><div class="nicon">📤</div>Pengeluaran</div>
 </div>
 
 <script src="app.js"></script>
